@@ -1,4 +1,4 @@
-package tenkstudio.makingpaper;
+package ten.k.studio.makingpaper;
 
 /**
  * Created by matthewlim on 4/9/16.

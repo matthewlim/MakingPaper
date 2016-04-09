@@ -1,10 +1,10 @@
-package tenkstudio.makingpaper;
+package ten.k.studio.makingpaper;
 
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
-import tenkstudio.makingpaper.view.TimerAnimationView;
+import ten.k.studio.makingpaper.view.TimerAnimationView;
 
 public class MainActivity extends AppCompatActivity {
 

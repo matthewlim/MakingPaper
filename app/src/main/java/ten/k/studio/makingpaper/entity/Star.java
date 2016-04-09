@@ -1,4 +1,4 @@
-package tenkstudio.makingpaper.entity;
+package ten.k.studio.makingpaper.entity;
 
 /**
  * Created by matthewlim on 4/9/16.

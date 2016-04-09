@@ -1,13 +1,13 @@
-package tenkstudio.makingpaper.entity;
+package ten.k.studio.makingpaper.entity;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 
-import tenkstudio.makingpaper.Util;
+import ten.k.studio.makingpaper.Util;
+
 
 /**
  * Created by Matthew Lim on 4/9/16.
@@ -44,7 +44,7 @@ public class Ship {
 
     public Ship() {
         shipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        shipPaint.setColor(Color.RED);
+        shipPaint.setColor(0xffb94a39);
         shipMatrix = new Matrix();
         jetPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         jetPaint.setColor(0x8800cece);
@@ -78,7 +78,7 @@ public class Ship {
     private void updateJetPath() {
         jetPath.reset();
         jetPath.moveTo(0, shipHeight / 6);
-        jetPath.lineTo(-shipLength / 2*(jetTicker/ JET_TICKER_MAX), shipHeight / 2);
+        jetPath.lineTo((-shipLength / 2) * (jetTicker/ JET_TICKER_MAX), shipHeight / 2);
         jetPath.lineTo(0, shipHeight*5/6);
         jetPath.close();
     }

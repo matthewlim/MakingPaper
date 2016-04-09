@@ -1,4 +1,4 @@
-package tenkstudio.makingpaper.view;
+package ten.k.studio.makingpaper.view;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -12,9 +12,10 @@ import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import tenkstudio.makingpaper.Util;
-import tenkstudio.makingpaper.entity.Ship;
-import tenkstudio.makingpaper.entity.Star;
+import ten.k.studio.makingpaper.Util;
+import ten.k.studio.makingpaper.entity.Ship;
+import ten.k.studio.makingpaper.entity.Star;
+
 
 /**
  * Created by Matthew Lim on 4/9/16.
