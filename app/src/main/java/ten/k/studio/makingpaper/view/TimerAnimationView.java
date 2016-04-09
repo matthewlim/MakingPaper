@@ -1,12 +1,17 @@
 package ten.k.studio.makingpaper.view;
 
+import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Timer;
@@ -24,6 +29,13 @@ import ten.k.studio.makingpaper.entity.Star;
 public class TimerAnimationView extends FrameLayout {
 
     public static final float ROTATION_RANGE = 20.f;
+    private final Runnable showRunnable = new Runnable() {
+
+        @Override
+        public void run() {
+            showTitle();
+        }
+    };
     private TimerTask frameTask;
     private Timer frameTimer;
     private float yMin;
@@ -44,8 +56,25 @@ public class TimerAnimationView extends FrameLayout {
     private Paint starPaint;
     private boolean hasMeasured;
 
+    private State titleState = State.SHOWN;
+
+
+    private enum State {
+        HIDDEN,
+        HIDING,
+        SHOWING,
+        SHOWN,
+    }
+
+    private ValueAnimator titleAnimator;
+
     private ArrayList<Star> foregroundStars = new ArrayList<>();
     private ArrayList<Star> backgroundStars = new ArrayList<>();
+
+    private TextView titleView;
+    private TextView twitterHandles;
+
+    private int titleMarginBottom;
 
     public TimerAnimationView(Context context) {
         this(context, null);
@@ -62,6 +91,8 @@ public class TimerAnimationView extends FrameLayout {
 
         setWillNotDraw(false);
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+
+        addTitleViews();
     }
 
     public void onActivityResume() { // schedule the task
@@ -79,6 +110,13 @@ public class TimerAnimationView extends FrameLayout {
         frameTimer.schedule(frameTask, 0, 16);
     }
 
+    private Runnable hideRunnable = new Runnable() {
+        @Override
+        public void run() {
+            hideTitle();
+        }
+    };
+
     public void initFrameTask() {
         frameTask = new TimerTask() {
             @Override
@@ -86,6 +124,15 @@ public class TimerAnimationView extends FrameLayout {
                 synchronized (frameLock){
                     if (ship != null) {
                         ship.onFrame();
+                        if (ship.y < titleMarginBottom &&
+                                titleState != State.HIDING && titleState != State.HIDDEN) {
+                            removeCallbacks(hideRunnable);
+                            post(hideRunnable);
+                        } else if (ship.y > titleMarginBottom &&
+                                titleState != State.SHOWING && titleState != State.SHOWN){
+                            removeCallbacks(showRunnable);
+                            post(showRunnable);
+                        }
                     }
                     if (hasMeasured) {
                         updateStars();
@@ -165,15 +212,31 @@ public class TimerAnimationView extends FrameLayout {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int height = MeasureSpec.getSize(heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
-        yMax = height*7/8;
-        yMin = height/8;
+
         if (ship == null) {
             ship = new Ship();
             ship.createShipBitmap(width);
             ship.y = height/2;
             ship.centerX = width*2/5;
         }
+        yMax = height*15/16 - ship.getShipHeight();
+        yMin = height/16;
+
+        titleMarginBottom = height/14 + titleView.getMeasuredHeight() + height/16 + twitterHandles.getMeasuredHeight();
+
         hasMeasured = true;
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+        int marginTop = getHeight()/14;
+        int marginLeft = (getWidth() - titleView.getMeasuredWidth())/2;
+        titleView.layout(marginLeft, marginTop, marginLeft + titleView.getMeasuredWidth(), marginTop + titleView.getMeasuredHeight());
+
+        marginTop += getHeight()/16;
+        marginLeft = (getWidth() - twitterHandles.getMeasuredWidth())/2;
+        twitterHandles.layout(marginLeft, marginTop, marginLeft + twitterHandles.getMeasuredWidth(), marginTop + twitterHandles.getMeasuredHeight());
     }
 
     public void onActivityPause() { // stop the task
@@ -241,5 +304,103 @@ public class TimerAnimationView extends FrameLayout {
         return super.onTouchEvent(event);
     }
 
+    private void hideTitle() {
+        if (titleAnimator != null) {
+            titleAnimator.cancel();
+        }
+        titleAnimator = ValueAnimator.ofFloat(titleView.getAlpha(), 0.f);
+        titleAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                titleView.setAlpha((Float) animation.getAnimatedValue());
+                twitterHandles.setAlpha((Float) animation.getAnimatedValue());
+            }
+        });
+        titleAnimator.addListener(new Animator.AnimatorListener() {
 
+            private boolean wasCancelled;
+
+            @Override
+            public void onAnimationStart(Animator animation) {
+                titleState = State.HIDING;
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (!wasCancelled){
+                    titleState = State.HIDDEN;
+                }
+                titleAnimator = null;
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                wasCancelled = true;
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
+            }
+        });
+        titleAnimator.start();
+    }
+
+    private void showTitle() {
+        if (titleAnimator != null) {
+            titleAnimator.cancel();
+        }
+        titleAnimator = ValueAnimator.ofFloat(titleView.getAlpha(), 1.f);
+        titleAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                titleView.setAlpha((Float) animation.getAnimatedValue());
+                twitterHandles.setAlpha((Float) animation.getAnimatedValue());
+            }
+        });
+        titleAnimator.addListener(new Animator.AnimatorListener() {
+            private boolean wasCanceled;
+
+
+            @Override
+            public void onAnimationStart(Animator animation) {
+                titleState = State.SHOWING;
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (!wasCanceled) {
+                    titleState = State.SHOWN;
+                }
+                titleAnimator = null;
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                wasCanceled = true;
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
+            }
+        });
+        titleAnimator.start();
+    }
+
+    private void addTitleViews() {
+        titleView = new TextView(getContext());
+        titleView.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        titleView.setTextColor(Color.WHITE);
+        titleView.setText("Making Paper");
+        titleView.setTextSize(20);
+        addView(titleView);
+
+        twitterHandles = new TextView(getContext());
+        twitterHandles.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        twitterHandles.setTextColor(Color.WHITE);
+        twitterHandles.setText("@matthewylim @kimchibooty");
+        twitterHandles.setTextSize(14);
+        addView(twitterHandles);
+    }
 }

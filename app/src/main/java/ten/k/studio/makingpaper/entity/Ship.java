@@ -53,6 +53,10 @@ public class Ship {
         driftDirection = Direction.OUTWARD;
     }
 
+    public int getShipHeight() {
+        return shipHeight;
+    }
+
     public void createShipBitmap(int screenWidth) {
 
         shipLength = screenWidth/8;
