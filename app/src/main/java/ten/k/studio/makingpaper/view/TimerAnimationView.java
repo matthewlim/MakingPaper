@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import ten.k.studio.makingpaper.R;
 import ten.k.studio.makingpaper.Util;
 import ten.k.studio.makingpaper.entity.Ship;
 import ten.k.studio.makingpaper.entity.Star;
@@ -29,35 +30,46 @@ import ten.k.studio.makingpaper.entity.Star;
 public class TimerAnimationView extends FrameLayout {
 
     public static final float ROTATION_RANGE = 20.f;
-    private final Runnable showRunnable = new Runnable() {
+    public static final int FOREGROUND_STAR_INTERVAL = 20;
+    public static final int BACKGROUND_STAR_INTERVAL = 30;
 
+    private TimerTask mFrameTask;
+    private Timer mFrameTimer;
+    private float mMinY;
+    private float mMaxY;
+
+    private static final Object sFrameLock = new Object();
+    private float mLastY;
+
+    private float mTouchSlop;
+    private Ship mShip;
+
+    private Paint mStarPaint;
+    private int mForegroundStarTicker;
+    private int mBackgroundStarTicker;
+    private ArrayList<Star> mForegroundStars = new ArrayList<>();
+    private ArrayList<Star> mBackgroundStars = new ArrayList<>();
+
+    private ValueAnimator mTitleAnimator;
+    private TextView mTitleView;
+    private TextView mSubtitleView;
+
+    private int mTitleMarginBottom;
+    private State mTitleState = State.SHOWN;
+
+    private final Runnable mShowTitleRunnable = new Runnable() {
         @Override
         public void run() {
             showTitle();
         }
     };
-    private TimerTask frameTask;
-    private Timer frameTimer;
-    private float yMin;
-    private float yMax;
 
-    private static final Object frameLock = new Object();
-    private float lastY;
-    private float downY;
-    private float lastX;
-    private float downX;
-    private float deltaY;
-    private float deltaX;
-
-    private float touchSlop;
-    private int foregroundStarTicker;
-    private int backgroundStarTicker;
-    private Ship ship;
-    private Paint starPaint;
-    private boolean hasMeasured;
-
-    private State titleState = State.SHOWN;
-
+    private Runnable mHideTitleRunnable = new Runnable() {
+        @Override
+        public void run() {
+            hideTitle();
+        }
+    };
 
     private enum State {
         HIDDEN,
@@ -65,16 +77,6 @@ public class TimerAnimationView extends FrameLayout {
         SHOWING,
         SHOWN,
     }
-
-    private ValueAnimator titleAnimator;
-
-    private ArrayList<Star> foregroundStars = new ArrayList<>();
-    private ArrayList<Star> backgroundStars = new ArrayList<>();
-
-    private TextView titleView;
-    private TextView twitterHandles;
-
-    private int titleMarginBottom;
 
     public TimerAnimationView(Context context) {
         this(context, null);
@@ -86,55 +88,28 @@ public class TimerAnimationView extends FrameLayout {
 
     public TimerAnimationView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-
-        starPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-
+        mStarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         setWillNotDraw(false);
-        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
-
+        mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         addTitleViews();
     }
 
-    public void onActivityResume() { // schedule the task
-
-        if (frameTimer == null) {
-            frameTimer = new Timer();
-        }
-        if (frameTask == null) {
-            initFrameTask();
-        } else {
-            frameTask.cancel();
-            frameTask = null;
-            initFrameTask();
-        }
-        frameTimer.schedule(frameTask, 0, 16);
-    }
-
-    private Runnable hideRunnable = new Runnable() {
-        @Override
-        public void run() {
-            hideTitle();
-        }
-    };
-
     public void initFrameTask() {
-        frameTask = new TimerTask() {
+        mFrameTask = new TimerTask() {
             @Override
             public void run() {
-                synchronized (frameLock){
-                    if (ship != null) {
-                        ship.onFrame();
-                        if (ship.y < titleMarginBottom &&
-                                titleState != State.HIDING && titleState != State.HIDDEN) {
-                            removeCallbacks(hideRunnable);
-                            post(hideRunnable);
-                        } else if (ship.y > titleMarginBottom &&
-                                titleState != State.SHOWING && titleState != State.SHOWN){
-                            removeCallbacks(showRunnable);
-                            post(showRunnable);
+                synchronized (sFrameLock){
+                    if (mShip != null) {
+                        mShip.onFrame();
+                        if (mShip.mY < mTitleMarginBottom &&
+                                mTitleState != State.HIDING && mTitleState != State.HIDDEN) {
+                            removeCallbacks(mHideTitleRunnable);
+                            post(mHideTitleRunnable);
+                        } else if (mShip.mY > mTitleMarginBottom &&
+                                mTitleState != State.SHOWING && mTitleState != State.SHOWN){
+                            removeCallbacks(mShowTitleRunnable);
+                            post(mShowTitleRunnable);
                         }
-                    }
-                    if (hasMeasured) {
                         updateStars();
                     }
                 }
@@ -143,66 +118,48 @@ public class TimerAnimationView extends FrameLayout {
         };
     }
 
-    private void updateStars() {
-        if (foregroundStarTicker++ == 40) {
-            foregroundStarTicker = 0;
+    public void onActivityResume() { // schedule the task
 
-            Star star = new Star(getWidth());
-            star.x = getWidth();
-            star.y = (float) (Math.random() * getHeight());
-            star.radius = getWidth()/64;
-            star.color = 0xffffffff;
-            star.speed = getWidth()/64;
-
-            foregroundStars.add(star);
+        if (mFrameTimer == null) {
+            mFrameTimer = new Timer();
         }
-
-        if (backgroundStarTicker++ == 60) {
-            backgroundStarTicker = 0;
-
-            Star star = new Star(getWidth());
-            star.x = getWidth();
-            star.y = (float) (Math.random() * getHeight());
-            star.radius = getWidth()/128;
-            star.color = 0x88ffffff;
-            star.speed = getWidth()/256;
-            backgroundStars.add(star);
+        if (mFrameTask == null) {
+            initFrameTask();
+        } else {
+            mFrameTask.cancel();
+            mFrameTask = null;
+            initFrameTask();
         }
-        ArrayList<Star> removalArray = new ArrayList<>();
-        for (Star star : foregroundStars) {
-            star.x -= star.speed;
-            if (star.x < 0.f) {
-                removalArray.add(star);
-            }
-
-        }
-        foregroundStars.removeAll(removalArray);
-        removalArray.clear();
-        for (Star star : backgroundStars) {
-            star.x -= star.speed;
-            if (star.x < 0.f) {
-                removalArray.add(star);
-            }
-        }
-        backgroundStars.removeAll(removalArray);
-        removalArray.clear();
+        mFrameTimer.schedule(mFrameTask, 0, 16);
     }
 
+    public void onActivityPause() { // stop the task
+
+        if (mFrameTimer != null) {
+            mFrameTimer.cancel();
+            mFrameTimer.purge();
+        }
+        if (mFrameTask != null) {
+            mFrameTask.cancel();
+            mFrameTask = null;
+            mFrameTimer = null;
+        }
+    }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        synchronized (frameLock) {
-            for (Star star : backgroundStars) {
-                starPaint.setColor(star.color);
-                canvas.drawCircle(star.x, star.y, star.radius, starPaint);
+        synchronized (sFrameLock) {
+            for (Star star : mBackgroundStars) {
+                mStarPaint.setColor(star.mColor);
+                canvas.drawCircle(star.mX, star.mY, star.mRadius, mStarPaint);
             }
-            if (ship != null) {
-                ship.drawShip(canvas);
+            if (mShip != null) {
+                mShip.drawShip(canvas);
             }
-            for (Star star : foregroundStars) {
-                starPaint.setColor(star.color);
-                canvas.drawCircle(star.x, star.y, star.radius, starPaint);
+            for (Star star : mForegroundStars) {
+                mStarPaint.setColor(star.mColor);
+                canvas.drawCircle(star.mX, star.mY, star.mRadius, mStarPaint);
             }
         }
     }
@@ -213,90 +170,60 @@ public class TimerAnimationView extends FrameLayout {
         int height = MeasureSpec.getSize(heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
 
-        if (ship == null) {
-            ship = new Ship();
-            ship.createShipBitmap(width);
-            ship.y = height/2;
-            ship.centerX = width*2/5;
+        if (mShip == null) {
+            mShip = new Ship();
+            mShip.createShipBitmap(width);
+            mShip.mY = height/2;
+            mShip.mCenterX = width*2/5;
         }
-        yMax = height*15/16 - ship.getShipHeight();
-        yMin = height/16;
+        mMaxY = height*15/16 - mShip.getShipHeight();
+        mMinY = height/16;
 
-        titleMarginBottom = height/14 + titleView.getMeasuredHeight() + height/16 + twitterHandles.getMeasuredHeight();
-
-        hasMeasured = true;
+        mTitleMarginBottom = height/14 + mTitleView.getMeasuredHeight() +
+                height/16 + mSubtitleView.getMeasuredHeight();
     }
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
         int marginTop = getHeight()/14;
-        int marginLeft = (getWidth() - titleView.getMeasuredWidth())/2;
-        titleView.layout(marginLeft, marginTop, marginLeft + titleView.getMeasuredWidth(), marginTop + titleView.getMeasuredHeight());
+        int marginLeft = (getWidth() - mTitleView.getMeasuredWidth())/2;
+        mTitleView.layout(marginLeft, marginTop, marginLeft + mTitleView.getMeasuredWidth(), marginTop + mTitleView.getMeasuredHeight());
 
         marginTop += getHeight()/16;
-        marginLeft = (getWidth() - twitterHandles.getMeasuredWidth())/2;
-        twitterHandles.layout(marginLeft, marginTop, marginLeft + twitterHandles.getMeasuredWidth(), marginTop + twitterHandles.getMeasuredHeight());
-    }
-
-    public void onActivityPause() { // stop the task
-
-        if (frameTimer != null) {
-            frameTimer.cancel();
-            frameTimer.purge();
-        }
-        if (frameTask != null) {
-            frameTask.cancel();
-            frameTask = null;
-            frameTimer = null;
-        }
+        marginLeft = (getWidth() - mSubtitleView.getMeasuredWidth())/2;
+        mSubtitleView.layout(marginLeft, marginTop, marginLeft + mSubtitleView.getMeasuredWidth(), marginTop + mSubtitleView.getMeasuredHeight());
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        synchronized (frameLock) {
+        synchronized (sFrameLock) {
 
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_POINTER_DOWN:
 
                     break;
                 case MotionEvent.ACTION_DOWN:
-
-                    lastY = downY = event.getY();
-                    lastX = downX = event.getX();
-
+                    mLastY = event.getY();
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
 
-                    deltaY = event.getY() - lastY;
-                    deltaX = event.getX() - lastX;
-
-                    lastX = event.getX();
-                    lastY = event.getY();
-                    if (ship != null) {
-                        ship.y = Math.min(yMax, Math.max(yMin, Util.lerp(ship.y, ship.y + deltaY, 0.7f)));
+                    float deltaY = event.getY() - mLastY;
+                    mLastY = event.getY();
+                    if (mShip != null) {
+                        mShip.mY = Math.min(mMaxY, Math.max(mMinY, Util.lerp(mShip.mY, mShip.mY + deltaY, 0.7f)));
                         if (deltaY > 0) {
-                            ship.rotation = ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / touchSlop);
+                            mShip.mRotation = ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop);
                         } else if (deltaY < 0) {
-                            ship.rotation = -ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / touchSlop);
+                            mShip.mRotation = -ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop);
                         }
-
                     }
-
                     break;
-                case MotionEvent.ACTION_CANCEL:
 
-                    break;
-                case MotionEvent.ACTION_POINTER_UP:
-
-                    break;
                 case MotionEvent.ACTION_UP:
 
-                    deltaX = event.getX() - lastX;
-                    deltaY = event.getY() - lastY;
-                    lastX = event.getX();
-                    lastY = event.getY();
+                    mLastY = event.getY();
 
                     break;
             }
@@ -304,33 +231,74 @@ public class TimerAnimationView extends FrameLayout {
         return super.onTouchEvent(event);
     }
 
-    private void hideTitle() {
-        if (titleAnimator != null) {
-            titleAnimator.cancel();
+    private void updateStars() {
+        if (mForegroundStarTicker++ == FOREGROUND_STAR_INTERVAL) {
+            mForegroundStarTicker = 0;
+            emitStar((int) (getWidth() / 64 + (getWidth()/128)*Math.random()), 0xffffffff, getWidth() / 64, mForegroundStars);
         }
-        titleAnimator = ValueAnimator.ofFloat(titleView.getAlpha(), 0.f);
-        titleAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+
+        if (mBackgroundStarTicker++ == BACKGROUND_STAR_INTERVAL) {
+            mBackgroundStarTicker = 0;
+            emitStar((int) (getWidth() / 128 + (getWidth()/256)*Math.random()), 0x66ffffff, getWidth() / 256, mBackgroundStars);
+        }
+        ArrayList<Star> removalArray = new ArrayList<>();
+        for (Star star : mForegroundStars) {
+            star.mX -= star.mSpeed;
+            if (star.mX < 0.f) {
+                removalArray.add(star);
+            }
+
+        }
+        mForegroundStars.removeAll(removalArray);
+        removalArray.clear();
+        for (Star star : mBackgroundStars) {
+            star.mX -= star.mSpeed;
+            if (star.mX < 0.f) {
+                removalArray.add(star);
+            }
+        }
+        mBackgroundStars.removeAll(removalArray);
+        removalArray.clear();
+    }
+
+    private void emitStar(int radius, int color, int speed, ArrayList<Star> collection) {
+        Star star = new Star();
+        star.mX = getWidth() + radius;
+        star.mY = (float) (Math.random() * getHeight());
+        star.mRadius = radius;
+        star.mColor = color;
+        star.mSpeed = speed;
+        collection.add(star);
+    }
+
+    // Title shenanigans
+    private void hideTitle() {
+        if (mTitleAnimator != null) {
+            mTitleAnimator.cancel();
+        }
+        mTitleAnimator = ValueAnimator.ofFloat(mTitleView.getAlpha(), 0.f);
+        mTitleAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                titleView.setAlpha((Float) animation.getAnimatedValue());
-                twitterHandles.setAlpha((Float) animation.getAnimatedValue());
+                mTitleView.setAlpha((Float) animation.getAnimatedValue());
+                mSubtitleView.setAlpha((Float) animation.getAnimatedValue());
             }
         });
-        titleAnimator.addListener(new Animator.AnimatorListener() {
+        mTitleAnimator.addListener(new Animator.AnimatorListener() {
 
             private boolean wasCancelled;
 
             @Override
             public void onAnimationStart(Animator animation) {
-                titleState = State.HIDING;
+                mTitleState = State.HIDING;
             }
 
             @Override
             public void onAnimationEnd(Animator animation) {
-                if (!wasCancelled){
-                    titleState = State.HIDDEN;
+                if (!wasCancelled) {
+                    mTitleState = State.HIDDEN;
                 }
-                titleAnimator = null;
+                mTitleAnimator = null;
             }
 
             @Override
@@ -343,36 +311,36 @@ public class TimerAnimationView extends FrameLayout {
 
             }
         });
-        titleAnimator.start();
+        mTitleAnimator.start();
     }
 
     private void showTitle() {
-        if (titleAnimator != null) {
-            titleAnimator.cancel();
+        if (mTitleAnimator != null) {
+            mTitleAnimator.cancel();
         }
-        titleAnimator = ValueAnimator.ofFloat(titleView.getAlpha(), 1.f);
-        titleAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+        mTitleAnimator = ValueAnimator.ofFloat(mTitleView.getAlpha(), 1.f);
+        mTitleAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                titleView.setAlpha((Float) animation.getAnimatedValue());
-                twitterHandles.setAlpha((Float) animation.getAnimatedValue());
+                mTitleView.setAlpha((Float) animation.getAnimatedValue());
+                mSubtitleView.setAlpha((Float) animation.getAnimatedValue());
             }
         });
-        titleAnimator.addListener(new Animator.AnimatorListener() {
+        mTitleAnimator.addListener(new Animator.AnimatorListener() {
             private boolean wasCanceled;
 
 
             @Override
             public void onAnimationStart(Animator animation) {
-                titleState = State.SHOWING;
+                mTitleState = State.SHOWING;
             }
 
             @Override
             public void onAnimationEnd(Animator animation) {
                 if (!wasCanceled) {
-                    titleState = State.SHOWN;
+                    mTitleState = State.SHOWN;
                 }
-                titleAnimator = null;
+                mTitleAnimator = null;
             }
 
             @Override
@@ -385,22 +353,22 @@ public class TimerAnimationView extends FrameLayout {
 
             }
         });
-        titleAnimator.start();
+        mTitleAnimator.start();
     }
 
     private void addTitleViews() {
-        titleView = new TextView(getContext());
-        titleView.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        titleView.setTextColor(Color.WHITE);
-        titleView.setText("Making Paper");
-        titleView.setTextSize(20);
-        addView(titleView);
+        mTitleView = new TextView(getContext());
+        mTitleView.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        mTitleView.setTextColor(Color.WHITE);
+        mTitleView.setText(R.string.app_name);
+        mTitleView.setTextSize(20);
+        addView(mTitleView);
 
-        twitterHandles = new TextView(getContext());
-        twitterHandles.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        twitterHandles.setTextColor(Color.WHITE);
-        twitterHandles.setText("@matthewylim @kimchibooty");
-        twitterHandles.setTextSize(14);
-        addView(twitterHandles);
+        mSubtitleView = new TextView(getContext());
+        mSubtitleView.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        mSubtitleView.setTextColor(Color.WHITE);
+        mSubtitleView.setText(R.string.twitter_handles);
+        mSubtitleView.setTextSize(14);
+        addView(mSubtitleView);
     }
 }

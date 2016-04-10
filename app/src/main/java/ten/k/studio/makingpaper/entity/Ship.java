@@ -15,26 +15,25 @@ import ten.k.studio.makingpaper.Util;
  */
 public class Ship {
 
-    public static final int JET_TICKER_MAX = 20;
+    public static final int JET_TICKER_MAX = 10;
 
-    public float centerX;
-    public float x;
-    public float y;
-    public float rotation;
+    public float mCenterX;
+    public float mX;
+    public float mY;
+    public float mRotation;
 
-    private Matrix shipMatrix;
-    private Bitmap shipBitmap;
-    private Path shipPath;
-    private int shipHeight;
-    private int shipLength;
-    private Paint shipPaint;
-    private Paint jetPaint;
-    private float jetTicker;
-    private Path jetPath;
-    private Direction jetDirection;
-    private Direction driftDirection;
-    private int driftRange;
-    private float currentDrift;
+    private Matrix mShipMatrix;
+    private Bitmap mShipBitmap;
+    private int mShipHeight;
+    private int mShipLength;
+    private Paint mShipPaint;
+    private Paint mJetPaint;
+    private float mJetTicker;
+    private Path mJetPath;
+    private Direction mJetDirection;
+    private Direction mDriftDirection;
+    private int mDriftRange;
+    private float mCurrentDrift;
 
 
     private enum Direction {
@@ -43,85 +42,85 @@ public class Ship {
     }
 
     public Ship() {
-        shipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        shipPaint.setColor(0xffb94a39);
-        shipMatrix = new Matrix();
-        jetPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        jetPaint.setColor(0x8800cece);
-        jetPath = new Path();
-        jetDirection = Direction.OUTWARD;
-        driftDirection = Direction.OUTWARD;
+        mShipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mShipPaint.setColor(0xffb94a39);
+        mShipMatrix = new Matrix();
+        mJetPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mJetPaint.setColor(0x8800cece);
+        mJetPath = new Path();
+        mJetDirection = Direction.OUTWARD;
+        mDriftDirection = Direction.OUTWARD;
     }
 
     public int getShipHeight() {
-        return shipHeight;
+        return mShipHeight;
     }
 
     public void createShipBitmap(int screenWidth) {
+        // create a bitmap for the ship, since we know it's not going to change.
+        mShipLength = screenWidth/8;
+        mShipHeight = mShipLength *3/4;
 
-        shipLength = screenWidth/8;
-        shipHeight = shipLength *3/4;
+        Path mShipPath = new Path();
+        mShipPath.moveTo(0, 0);
+        mShipPath.lineTo(mShipLength, mShipHeight / 2);
+        mShipPath.lineTo(0, mShipHeight);
+        mShipPath.close();
 
-        shipPath = new Path();
-        shipPath.moveTo(0, 0);
-        shipPath.lineTo(shipLength, shipHeight / 2);
-        shipPath.lineTo(0, shipHeight);
-        shipPath.close();
+        mShipBitmap = Bitmap.createBitmap(mShipLength, mShipHeight, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(mShipBitmap);
+        canvas.drawPath(mShipPath, mShipPaint);
 
-        shipBitmap = Bitmap.createBitmap(shipLength, shipHeight, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(shipBitmap);
-        canvas.drawPath(shipPath, shipPaint);
-
-        jetPath.moveTo(0, shipHeight / 6);
-        jetPath.lineTo(-shipLength / 2, shipHeight / 2);
-        jetPath.lineTo(0, shipHeight * 5 / 6);
-        jetPath.close();
-        driftRange = shipLength/3;
+        mJetPath.moveTo(0, mShipHeight / 6);
+        mJetPath.lineTo(-mShipLength / 2, mShipHeight / 2);
+        mJetPath.lineTo(0, mShipHeight * 5 / 6);
+        mJetPath.close();
+        mDriftRange = mShipLength /3;
     }
 
     private void updateJetPath() {
-        jetPath.reset();
-        jetPath.moveTo(0, shipHeight / 6);
-        jetPath.lineTo((-shipLength / 2) * (jetTicker/ JET_TICKER_MAX), shipHeight / 2);
-        jetPath.lineTo(0, shipHeight*5/6);
-        jetPath.close();
+        mJetPath.reset();
+        mJetPath.moveTo(0, mShipHeight / 6);
+        mJetPath.lineTo((-mShipLength / 2) * (mJetTicker / JET_TICKER_MAX), mShipHeight / 2);
+        mJetPath.lineTo(0, mShipHeight * 5 / 6);
+        mJetPath.close();
     }
 
     public void drawShip(Canvas canvas) {
-        if (shipBitmap != null) {
-            shipMatrix.reset();
-            shipMatrix.setTranslate(x, y);
-            shipMatrix.postRotate(rotation, x + shipLength / 2, y + shipHeight / 2);
-            canvas.drawBitmap(shipBitmap, shipMatrix, null);
+        if (mShipBitmap != null) {
+            mShipMatrix.reset();
+            mShipMatrix.setTranslate(mX, mY);
+            mShipMatrix.postRotate(mRotation, mX + mShipLength / 2, mY + mShipHeight / 2);
+            canvas.drawBitmap(mShipBitmap, mShipMatrix, null);
             updateJetPath();
-            jetPath.transform(shipMatrix);
-            canvas.drawPath(jetPath, jetPaint);
+            mJetPath.transform(mShipMatrix);
+            canvas.drawPath(mJetPath, mJetPaint);
         }
     }
 
     public void onFrame() {
-        rotation = Util.lerp(rotation, 0.f, 0.1f);
-        if (jetDirection == Direction.OUTWARD) {
-            if (jetTicker++ == JET_TICKER_MAX) {
-                jetDirection = Direction.INWARD;
+        mRotation = Util.lerp(mRotation, 0.f, 0.1f);
+        if (mJetDirection == Direction.OUTWARD) {
+            if (mJetTicker++ == JET_TICKER_MAX) {
+                mJetDirection = Direction.INWARD;
             }
         } else {
-            if (jetTicker-- == 0) {
-                jetDirection = Direction.OUTWARD;
+            if (mJetTicker-- == 0) {
+                mJetDirection = Direction.OUTWARD;
             }
         }
-        if (driftDirection == Direction.OUTWARD) {
-            currentDrift = Util.lerp(currentDrift, driftRange, 0.0125f);
-            if (Math.abs(currentDrift - driftRange) < 0.1f) {
-                driftDirection = Direction.INWARD;
+        if (mDriftDirection == Direction.OUTWARD) {
+            mCurrentDrift = Util.lerp(mCurrentDrift, mDriftRange, 0.0125f);
+            if (Math.abs(mCurrentDrift - mDriftRange) < 0.1f) {
+                mDriftDirection = Direction.INWARD;
             }
 
         } else {
-            currentDrift = Util.lerp(currentDrift, 0, 0.0125f);
-            if (currentDrift < 0.1f) {
-                driftDirection = Direction.OUTWARD;
+            mCurrentDrift = Util.lerp(mCurrentDrift, 0, 0.0125f);
+            if (mCurrentDrift < 0.1f) {
+                mDriftDirection = Direction.OUTWARD;
             }
         }
-        x = centerX + currentDrift;
+        mX = mCenterX + mCurrentDrift;
     }
 }
