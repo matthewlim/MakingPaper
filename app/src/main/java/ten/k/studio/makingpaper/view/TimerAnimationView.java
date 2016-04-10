@@ -20,6 +20,7 @@ import java.util.TimerTask;
 import ten.k.studio.makingpaper.R;
 import ten.k.studio.makingpaper.Util;
 import ten.k.studio.makingpaper.entity.Ship;
+import ten.k.studio.makingpaper.entity.Smoke;
 import ten.k.studio.makingpaper.entity.Star;
 
 
@@ -56,6 +57,9 @@ public class TimerAnimationView extends FrameLayout {
 
     private int mTitleMarginBottom;
     private State mTitleState = State.SHOWN;
+
+    private int mSmokeTicker;
+    private ArrayList<Smoke> mSmokeParticles = new ArrayList<>();
 
     private final Runnable mShowTitleRunnable = new Runnable() {
         @Override
@@ -111,6 +115,7 @@ public class TimerAnimationView extends FrameLayout {
                             post(mShowTitleRunnable);
                         }
                         updateStars();
+                        updateSmoke();
                     }
                 }
                 postInvalidate();
@@ -155,6 +160,9 @@ public class TimerAnimationView extends FrameLayout {
                 canvas.drawCircle(star.mX, star.mY, star.mRadius, mStarPaint);
             }
             if (mShip != null) {
+                for (Smoke smoke : mSmokeParticles) {
+                    smoke.drawSmoke(canvas);
+                }
                 mShip.drawShip(canvas);
             }
             for (Star star : mForegroundStars) {
@@ -229,6 +237,29 @@ public class TimerAnimationView extends FrameLayout {
             }
         }
         return super.onTouchEvent(event);
+    }
+
+    private void updateSmoke() {
+        if (mSmokeTicker++ == 2) {
+            Smoke smoke = new Smoke(mShip.getShipHeight()/4);
+            float variation = (float) (-mShip.getShipHeight()/4 + Math.random()*mShip.getShipHeight()/2);
+            smoke.mY = mShip.mY + mShip.getShipHeight()/2 - smoke.mDiameter/2 + variation;
+            smoke.mX = mShip.mX - smoke.mDiameter;
+            mSmokeParticles.add(smoke);
+            mSmokeTicker = 0;
+        }
+        ArrayList<Smoke> removalArray = new ArrayList<>();
+        for (Smoke smoke: mSmokeParticles) {
+            smoke.mRotation = Util.lerp(smoke.mRotation, 360.f, 0.05f);
+            smoke.mX = Util.lerp(smoke.mX, -getWidth()/2, .05f*smoke.mRotation/360);
+
+            if (smoke.mX <= 0.f) {
+                removalArray.add(smoke);
+            }
+        }
+        mSmokeParticles.removeAll(removalArray);
+        removalArray.clear();
+
     }
 
     private void updateStars() {
