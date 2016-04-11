@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -105,6 +106,7 @@ public class TimerAnimationView extends FrameLayout {
         explosions = new ArrayList<>();
         explosionsToDelete = new ArrayList<>();
         explosionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        explosionPaint.setColor(Color.WHITE);
     }
 
     public void initFrameTask() {
@@ -286,9 +288,14 @@ public class TimerAnimationView extends FrameLayout {
         ArrayList<Star> removalArray = new ArrayList<>();
         for (Star star : mForegroundStars) {
             star.mX -= star.mSpeed;
+
+            //if (Math.abs((star.mX + star.mRadius) - mShip.getShipRect().centerX()) <= star.mRadius &&
+            //        Math.abs(star.mY - mShip.getShipRect().centerY()) <= star.mRadius) {
+            //if ((star.mX + star.mRadius > mShip.getShipRect().centerX() && star.mX + star.mRadius < mShip.mX + mShip.getShipHeight()*4/3)
+            //    && (star.mY > mShip.getShipRect().centerY() - mShip.getShipRect().height() && star.mY  < mShip.getShipRect().centerY() + mShip.getShipRect().height()/2)) {
             if ((star.mX + star.mRadius > mShip.mX && star.mX + star.mRadius < mShip.mX + mShip.getShipHeight()*4/3)
                     && (star.mY > mShip.mY && star.mY  < mShip.mY + mShip.getShipHeight())) {
-                addExplosion(star.mX, star.mY, Util.getRandomColor());
+                addExplosion(star.mX, star.mY);
                 removalArray.add(star);
             }
             if (star.mX < 0.f) {
@@ -421,7 +428,6 @@ public class TimerAnimationView extends FrameLayout {
 
     private void drawExplosions(Canvas canvas) {
         for (Explosion data : explosions) {
-            explosionPaint.setColor(data.color);
             explosionPaint.setAlpha(data.alpha);
             canvas.drawCircle(data.x, data.y, data.radius, explosionPaint);
         }
@@ -437,11 +443,10 @@ public class TimerAnimationView extends FrameLayout {
         explosionsToDelete.clear();
     }
 
-    public void addExplosion(float explosionX, float explosionY, int color) {
+    public void addExplosion(float explosionX, float explosionY) {
         final Explosion data = new Explosion();
         data.x = explosionX;
         data.y = explosionY;
-        data.color = color;
         final ValueAnimator circleAnim = ValueAnimator.ofFloat(0, 1);
         circleAnim.setDuration(800);
         circleAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {

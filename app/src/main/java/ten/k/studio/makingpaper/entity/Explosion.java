@@ -8,6 +8,5 @@ public class Explosion {
     public int alpha;
     public float x;
     public float y;
-    public int color;
     public boolean shouldDelete;
 }

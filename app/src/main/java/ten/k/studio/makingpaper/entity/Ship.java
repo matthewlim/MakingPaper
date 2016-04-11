@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 
 import ten.k.studio.makingpaper.Util;
 
@@ -34,6 +35,7 @@ public class Ship {
     private Direction mDriftDirection;
     private int mDriftRange;
     private float mCurrentDrift;
+    private RectF mShipRect;
 
 
     private enum Direction {
@@ -50,6 +52,12 @@ public class Ship {
         mJetPath = new Path();
         mJetDirection = Direction.OUTWARD;
         mDriftDirection = Direction.OUTWARD;
+        mShipRect = new RectF(0, 0, mShipLength, mShipHeight);
+        mShipMatrix.mapRect(mShipRect);
+    }
+
+    public RectF getShipRect() {
+        return mShipRect;
     }
 
     public int getShipHeight() {
