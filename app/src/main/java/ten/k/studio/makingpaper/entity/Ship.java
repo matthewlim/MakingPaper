@@ -17,10 +17,11 @@ public class Ship {
 
     public static final int JET_TICKER_MAX = 10;
 
-    public float mCenterX;
-    public float mX;
-    public float mY;
-    public float mRotation;
+    private float mCenterX;
+    private float mX;
+    private float mY;
+    private float mLastY;
+    private float mRotation;
 
     private Matrix mShipMatrix;
     private Bitmap mShipBitmap;
@@ -99,7 +100,9 @@ public class Ship {
     }
 
     public void onFrame() {
-        mRotation = Util.lerp(mRotation, 0.f, 0.1f);
+        if (Math.abs(mY - mLastY) <= mShipHeight/16) {
+            mRotation = Util.lerp(mRotation, 0.f, 0.1f);
+        }
         if (mJetDirection == Direction.OUTWARD) {
             if (mJetTicker++ == JET_TICKER_MAX) {
                 mJetDirection = Direction.INWARD;
@@ -122,5 +125,26 @@ public class Ship {
             }
         }
         mX = mCenterX + mCurrentDrift;
+    }
+
+    public void setY(float y) {
+        mLastY = mY;
+        mY = y;
+    }
+
+    public float getY() {
+        return mY;
+    }
+
+    public float getX() {
+        return mX;
+    }
+
+    public void setCenterX(float centerX) {
+        mCenterX = centerX;
+    }
+
+    public void setRotation(float rotation) {
+        mRotation = rotation;
     }
 }

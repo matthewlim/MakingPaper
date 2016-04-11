@@ -105,11 +105,11 @@ public class TimerAnimationView extends FrameLayout {
                 synchronized (sFrameLock){
                     if (mShip != null) {
                         mShip.onFrame();
-                        if (mShip.mY < mTitleMarginBottom &&
+                        if (mShip.getY() < mTitleMarginBottom &&
                                 mTitleState != State.HIDING && mTitleState != State.HIDDEN) {
                             removeCallbacks(mHideTitleRunnable);
                             post(mHideTitleRunnable);
-                        } else if (mShip.mY > mTitleMarginBottom &&
+                        } else if (mShip.getY() > mTitleMarginBottom &&
                                 mTitleState != State.SHOWING && mTitleState != State.SHOWN){
                             removeCallbacks(mShowTitleRunnable);
                             post(mShowTitleRunnable);
@@ -181,8 +181,8 @@ public class TimerAnimationView extends FrameLayout {
         if (mShip == null) {
             mShip = new Ship();
             mShip.createShipBitmap(width);
-            mShip.mY = height/2;
-            mShip.mCenterX = width*2/5;
+            mShip.setY(height/2);
+            mShip.setCenterX(width*2/5);
         }
         mMaxY = height*15/16 - mShip.getShipHeight();
         mMinY = height/16;
@@ -208,31 +208,23 @@ public class TimerAnimationView extends FrameLayout {
         synchronized (sFrameLock) {
 
             switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_POINTER_DOWN:
-
-                    break;
                 case MotionEvent.ACTION_DOWN:
                     mLastY = event.getY();
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
-
+                case MotionEvent.ACTION_UP:
                     float deltaY = event.getY() - mLastY;
                     mLastY = event.getY();
                     if (mShip != null) {
-                        mShip.mY = Math.min(mMaxY, Math.max(mMinY, Util.lerp(mShip.mY, mShip.mY + deltaY, 0.7f)));
+
+                        mShip.setY(Math.min(mMaxY, Math.max(mMinY, Util.lerp(mShip.getY(), mShip.getY() + deltaY, 0.7f))));
                         if (deltaY > 0) {
-                            mShip.mRotation = ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop);
+                            mShip.setRotation(ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop));
                         } else if (deltaY < 0) {
-                            mShip.mRotation = -ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop);
+                            mShip.setRotation(-ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop));
                         }
                     }
-                    break;
-
-                case MotionEvent.ACTION_UP:
-
-                    mLastY = event.getY();
-
                     break;
             }
         }
@@ -243,8 +235,8 @@ public class TimerAnimationView extends FrameLayout {
         if (mSmokeTicker++ == 2) {
             Smoke smoke = new Smoke(mShip.getShipHeight()/4);
             float variation = (float) (-mShip.getShipHeight()/4 + Math.random()*mShip.getShipHeight()/2);
-            smoke.mY = mShip.mY + mShip.getShipHeight()/2 - smoke.mDiameter/2 + variation;
-            smoke.mX = mShip.mX - smoke.mDiameter;
+            smoke.mY = mShip.getY() + mShip.getShipHeight()/2 - smoke.mDiameter/2 + variation;
+            smoke.mX = mShip.getX() - smoke.mDiameter;
             mSmokeParticles.add(smoke);
             mSmokeTicker = 0;
         }
