@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
@@ -19,6 +20,7 @@ import java.util.TimerTask;
 
 import ten.k.studio.makingpaper.R;
 import ten.k.studio.makingpaper.Util;
+import ten.k.studio.makingpaper.entity.Explosion;
 import ten.k.studio.makingpaper.entity.Ship;
 import ten.k.studio.makingpaper.entity.Smoke;
 import ten.k.studio.makingpaper.entity.Star;
@@ -58,6 +60,10 @@ public class TimerAnimationView extends FrameLayout {
     private int mTitleMarginBottom;
     private State mTitleState = State.SHOWN;
 
+    protected ArrayList<Explosion> explosions;
+    protected ArrayList<Explosion> explosionsToDelete;
+    protected Paint explosionPaint;
+
     private int mSmokeTicker;
     private ArrayList<Smoke> mSmokeParticles = new ArrayList<>();
 
@@ -96,13 +102,16 @@ public class TimerAnimationView extends FrameLayout {
         setWillNotDraw(false);
         mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         addTitleViews();
+        explosions = new ArrayList<>();
+        explosionsToDelete = new ArrayList<>();
+        explosionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     }
 
     public void initFrameTask() {
         mFrameTask = new TimerTask() {
             @Override
             public void run() {
-                synchronized (sFrameLock){
+                synchronized (sFrameLock) {
                     if (mShip != null) {
                         mShip.onFrame();
                         if (mShip.mY < mTitleMarginBottom &&
@@ -116,6 +125,7 @@ public class TimerAnimationView extends FrameLayout {
                         }
                         updateStars();
                         updateSmoke();
+                        updateExplosions();
                     }
                 }
                 postInvalidate();
@@ -169,6 +179,7 @@ public class TimerAnimationView extends FrameLayout {
                 mStarPaint.setColor(star.mColor);
                 canvas.drawCircle(star.mX, star.mY, star.mRadius, mStarPaint);
             }
+            drawExplosions(canvas);
         }
     }
 
@@ -275,6 +286,11 @@ public class TimerAnimationView extends FrameLayout {
         ArrayList<Star> removalArray = new ArrayList<>();
         for (Star star : mForegroundStars) {
             star.mX -= star.mSpeed;
+            if ((star.mX + star.mRadius > mShip.mX && star.mX + star.mRadius < mShip.mX + mShip.getShipHeight()*4/3)
+                    && (star.mY > mShip.mY && star.mY  < mShip.mY + mShip.getShipHeight())) {
+                addExplosion(star.mX, star.mY, Util.getRandomColor());
+                removalArray.add(star);
+            }
             if (star.mX < 0.f) {
                 removalArray.add(star);
             }
@@ -401,5 +417,71 @@ public class TimerAnimationView extends FrameLayout {
         mSubtitleView.setText(R.string.twitter_handles);
         mSubtitleView.setTextSize(14);
         addView(mSubtitleView);
+    }
+
+    private void drawExplosions(Canvas canvas) {
+        for (Explosion data : explosions) {
+            explosionPaint.setColor(data.color);
+            explosionPaint.setAlpha(data.alpha);
+            canvas.drawCircle(data.x, data.y, data.radius, explosionPaint);
+        }
+    }
+
+    protected void updateExplosions() {
+        for (Explosion data : explosions) {
+            if (data.shouldDelete) {
+                explosionsToDelete.add(data);
+            }
+        }
+        explosions.removeAll(explosionsToDelete);
+        explosionsToDelete.clear();
+    }
+
+    public void addExplosion(float explosionX, float explosionY, int color) {
+        final Explosion data = new Explosion();
+        data.x = explosionX;
+        data.y = explosionY;
+        data.color = color;
+        final ValueAnimator circleAnim = ValueAnimator.ofFloat(0, 1);
+        circleAnim.setDuration(800);
+        circleAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                data.radius = (int) (getHeight() / 2 * animation.getAnimatedFraction());
+                data.alpha = (int) (255 * (1 - animation.getAnimatedFraction()));
+
+            }
+        });
+
+        circleAnim.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                data.radius = 0;
+                data.alpha = 0;
+                data.shouldDelete = true;
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
+            }
+        });
+        explosions.add(data);
+        post(new Runnable() {
+            @Override
+            public void run() {
+                circleAnim.start();
+            }
+        });
+
     }
 }
