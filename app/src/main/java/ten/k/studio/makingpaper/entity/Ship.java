@@ -147,4 +147,8 @@ public class Ship {
     public void setRotation(float rotation) {
         mRotation = rotation;
     }
+
+    public float getRotation() {
+        return mRotation;
+    }
 }

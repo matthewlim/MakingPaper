@@ -220,9 +220,9 @@ public class TimerAnimationView extends FrameLayout {
 
                         mShip.setY(Math.min(mMaxY, Math.max(mMinY, Util.lerp(mShip.getY(), mShip.getY() + deltaY, 0.7f))));
                         if (deltaY > 0) {
-                            mShip.setRotation(ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop));
+                            mShip.setRotation(Util.lerp(mShip.getRotation(), ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop), 0.4f));
                         } else if (deltaY < 0) {
-                            mShip.setRotation(-ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop));
+                            mShip.setRotation(Util.lerp(mShip.getRotation(), -ROTATION_RANGE * Math.min(1.f, Math.abs(deltaY) / mTouchSlop), 0.4f));
                         }
                     }
                     break;
