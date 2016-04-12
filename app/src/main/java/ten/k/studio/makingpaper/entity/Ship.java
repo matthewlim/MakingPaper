@@ -44,10 +44,10 @@ public class Ship {
 
     public Ship() {
         mShipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mShipPaint.setColor(0xffb94a39);
+        mShipPaint.setColor(0xff33659a);
         mShipMatrix = new Matrix();
         mJetPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mJetPaint.setColor(0x8800cece);
+        mJetPaint.setColor(0x88fe4c00);
         mJetPath = new Path();
         mJetDirection = Direction.OUTWARD;
         mDriftDirection = Direction.OUTWARD;
@@ -62,28 +62,32 @@ public class Ship {
         mShipLength = screenWidth/8;
         mShipHeight = mShipLength *3/4;
 
+        int cornerBevel = mShipHeight/8;
+
         Path mShipPath = new Path();
-        mShipPath.moveTo(0, 0);
+        mShipPath.moveTo(cornerBevel, 0);
         mShipPath.lineTo(mShipLength, mShipHeight / 2);
-        mShipPath.lineTo(0, mShipHeight);
+        mShipPath.lineTo(cornerBevel, mShipHeight);
+        mShipPath.lineTo(0, mShipHeight - cornerBevel);
+        mShipPath.lineTo(0, cornerBevel);
         mShipPath.close();
 
         mShipBitmap = Bitmap.createBitmap(mShipLength, mShipHeight, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(mShipBitmap);
         canvas.drawPath(mShipPath, mShipPaint);
 
-        mJetPath.moveTo(0, mShipHeight / 6);
+        mJetPath.moveTo(0, mShipHeight / 4);
         mJetPath.lineTo(-mShipLength / 2, mShipHeight / 2);
-        mJetPath.lineTo(0, mShipHeight * 5 / 6);
+        mJetPath.lineTo(0, mShipHeight * 3 / 4);
         mJetPath.close();
         mDriftRange = mShipLength /3;
     }
 
     private void updateJetPath() {
         mJetPath.reset();
-        mJetPath.moveTo(0, mShipHeight / 6);
+        mJetPath.moveTo(0, mShipHeight / 4);
         mJetPath.lineTo((-mShipLength / 2) * (mJetTicker / JET_TICKER_MAX), mShipHeight / 2);
-        mJetPath.lineTo(0, mShipHeight * 5 / 6);
+        mJetPath.lineTo(0, mShipHeight * 3 / 4);
         mJetPath.close();
     }
 
